@@ -18,13 +18,19 @@ private:
 public:
     TimeKeeper(bool threadsafe) : threadsafe(threadsafe){};
     template <typename Func>
-    auto wrap(Func &&func, std::string identifier, std::ostream &out = std::cout)
+    auto wrap(Func &&func, std::string identifier)
     {
-        return [ threadsafe = this->threadsafe, &mutex = this->mutex, &timings = this->timings, func = std::forward<Func>(func), identifier = std::move(identifier) ](auto &&... args) -> auto
+        return [ threadsafe = this->threadsafe,
+                 &mutex = this->mutex,
+                 &timings = this->timings,
+                 func = std::forward<Func>(func),
+                 identifier = std::move(identifier) ](auto &&... args) -> auto
         {
             auto start = std::chrono::steady_clock::now();
             decltype(auto) result = func(std::forward<decltype(args)>(args)...);
-            auto timing = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            auto timing = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count();
             if (threadsafe)
             {
                 std::unique_lock<std::mutex> lock(mutex);
