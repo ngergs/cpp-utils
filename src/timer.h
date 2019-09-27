@@ -24,7 +24,7 @@ public:
                  &mutex = this->mutex,
                  &timings = this->timings,
                  func = std::forward<Func>(func),
-                 identifier = std::move(identifier) ](auto &&... args) -> auto
+                 identifier = std::move(identifier) ](auto &&... args) -> decltype(auto)
         {
             auto start = std::chrono::steady_clock::now();
             decltype(auto) result = func(std::forward<decltype(args)>(args)...);
