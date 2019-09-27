@@ -10,12 +10,12 @@ private:
     const bool threadsafe;
     std::mutex mutex;
     std::unordered_map<std::string, std::vector<int64_t>> timings;
+
+public:
     TimeKeeper(TimeKeeper &other) = delete;
     TimeKeeper(TimeKeeper &&other) = default;
     TimeKeeper &operator=(TimeKeeper &other) = delete;
     TimeKeeper &operator=(TimeKeeper &&other) = default;
-
-public:
     TimeKeeper(bool threadsafe) : threadsafe(threadsafe){};
     template <typename Func>
     auto wrap(Func &&func, std::string identifier)
