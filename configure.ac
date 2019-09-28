@@ -40,4 +40,3 @@ AC_CONFIG_FILES([Makefile
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 AC_OUTPUT
 
-

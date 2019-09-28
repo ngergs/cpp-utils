@@ -7,12 +7,25 @@
 #include <unordered_map>
 #include <vector>
 
+template <class Duration>
 class TimeKeeper
 {
 private:
     const bool threadsafe;
     std::mutex mutex;
     std::unordered_map<std::string, std::vector<int64_t>> timings;
+    void pushTiming(std::string identifier, int64_t timing)
+    {
+        if (threadsafe)
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            timings[identifier].push_back(timing);
+        }
+        else
+        {
+            timings[identifier].push_back(timing);
+        }
+    }
 
 public:
     TimeKeeper(TimeKeeper &other) = delete;
@@ -20,33 +33,28 @@ public:
     TimeKeeper &operator=(TimeKeeper &other) = delete;
     TimeKeeper &operator=(TimeKeeper &&other) = default;
     TimeKeeper(bool threadsafe) : threadsafe(threadsafe){};
-    template <typename Func>
-    auto wrap(Func &&func, std::string identifier)
+    template <typename Identifier, typename Func, typename... Args,
+              typename std::enable_if<!std::is_void<std::result_of_t<Func(Args...)>>::value>::type * = nullptr>
+    auto wrap(Identifier &&identifier, Func &&func, Args &&... args)
     {
-        return [ threadsafe = this->threadsafe,
-                 &mutex = this->mutex,
-                 &timings = this->timings,
-                 func = std::forward<Func>(func),
-                 identifier = std::move(identifier) ](auto &&... args) -> auto
-        {
-            auto start = std::chrono::steady_clock::now();
-            decltype(auto) result = func(std::forward<decltype(args)>(args)...);
-            auto timing = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::steady_clock::now() - start)
-                              .count();
-            if (threadsafe)
-            {
-                std::unique_lock<std::mutex> lock(mutex);
-                timings[identifier].push_back(timing);
-            }
-            else
-            {
-                timings[identifier].push_back(timing);
-            }
-            return result;
-        };
+        auto start = std::chrono::steady_clock::now();
+        auto result = func(std::forward<decltype(args)>(args)...);
+        pushTiming(identifier, std::chrono::duration_cast<Duration>(
+                                   std::chrono::steady_clock::now() - start)
+                                   .count());
+        return std::forward<decltype(result)>(result);
     }
-    void getAverageTimings(std::ostream &out = std::cout)
+    template <typename Identifier, typename Func, typename... Args,
+              typename std::enable_if<std::is_void<std::result_of_t<Func(Args...)>>::value>::type * = nullptr>
+    void wrap(Identifier &&identifier, Func &&func, Args &&... args)
+    {
+        auto start = std::chrono::steady_clock::now();
+        func(std::forward<decltype(args)>(args)...);
+        pushTiming(identifier, std::chrono::duration_cast<Duration>(
+                                   std::chrono::steady_clock::now() - start)
+                                   .count());
+    }
+    void getAverageTimings(std::ostream &out = std::cout) const
     {
         for (const auto &timing : timings)
         {
@@ -56,7 +64,7 @@ public:
             {
                 average += time;
             }
-            out << average / timing.second.size() << "ms" << std::endl;
+            out << average / timing.second.size() << std::endl;
         }
     }
 };
