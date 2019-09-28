@@ -1,3 +1,6 @@
+#ifndef _TIMER_H_
+#define _TIMER_H_
+
 #include <chrono>
 #include <iostream>
 #include <mutex>
@@ -24,7 +27,7 @@ public:
                  &mutex = this->mutex,
                  &timings = this->timings,
                  func = std::forward<Func>(func),
-                 identifier = std::move(identifier) ](auto &&... args) -> decltype(auto)
+                 identifier = std::move(identifier) ](auto &&... args) -> auto
         {
             auto start = std::chrono::steady_clock::now();
             decltype(auto) result = func(std::forward<decltype(args)>(args)...);
@@ -57,3 +60,4 @@ public:
         }
     }
 };
+#endif
